@@ -6,7 +6,9 @@
 
 ![效果截图](docs/screenshot.png)
 
-状态：0.13.0，2026-10-02 固化。`claude plugin validate` 通过，`claude plugin test` 13 通过。
+状态：0.14.0。`claude plugin validate` 通过，`claude plugin test` 15 通过。
+
+界面有中文和英文两套：系统是中文（或以前写过中文定位）时用中文，否则用英文；`/focus-lang` 可切换。
 
 ## 安装
 
@@ -24,6 +26,7 @@ claude plugin marketplace add chaoshengsc/focus-band && claude plugin install fo
 
 - `/focus 终点 | 瓶颈 | 范围`：改写定位；不带参数查看；`/focus clear` 清除
 - `/focus-style 1|2|3`：标准 / 一行 / 页脚
+- `/focus-lang zh|en`：界面语言；不带参数则切换
 - `/focus-color`：换进度条配色（桌面端点右侧小螃蟹也行）
 - 模型用 `set_focus` 工具更新定位；每条提示后会附一句当前定位给模型（用户看不到）
 

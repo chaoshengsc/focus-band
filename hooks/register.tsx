@@ -13,22 +13,89 @@ const LEVELS = [
 const TRACK = 'rgba(128,128,128,0.25)'
 const BAR = 72
 // 配色：只换进度条平时的颜色。背景板是界面自己画的，mod 盖不满它，所以不碰底色
-const TINTS = [
-  { name: '默认', accent: '#6f6f6f' },
-  { name: '墨黑', accent: '#3a3a3a' },
-  { name: '暖沙', accent: '#8a7a63' },
-  { name: '陶土', accent: '#d97757' },
-  { name: '雾蓝', accent: '#4a6fd8' },
-  { name: '苔绿', accent: '#5b8a5a' },
-  { name: '藤紫', accent: '#7b61c9' },
-]
+const TINTS = ['#6f6f6f', '#3a3a3a', '#8a7a63', '#d97757', '#4a6fd8', '#5b8a5a', '#7b61c9']
 // 只画认识的窗口，其余不显示
 const WINDOWS: Record<string, string> = { five_hour: '5h', seven_day: '7d', spend_limit: '$' }
-const STYLES = ['', '标准', '一行', '页脚']
 const TOOL = 'mcp__focus-band__set_focus'
-const USAGE = '用法：/focus 终点 | 瓶颈 | 范围（用全角｜或两侧带空格的 | 分隔，范围可省略）；/focus clear 清除'
-const TINT_USAGE = `用法：/focus-color 1-${TINTS.length}，或配色名（${TINTS.map(one => one.name).join('、')}）；不带参数则换下一个`
-const STYLE_USAGE = '用法：/focus-style 1（标准）、2（一行）、3（页脚）；不带参数则轮换'
+
+type Lang = 'zh' | 'en'
+
+// 界面文字：中文和英文各一套。配色名、版式名按序号对应 TINTS 和版式 1-3
+const TEXT = {
+  zh: {
+    goal: '终点',
+    bottleneck: '瓶颈',
+    scope: '范围',
+    styles: ['', '标准', '一行', '页脚'],
+    tints: ['默认', '墨黑', '暖沙', '陶土', '雾蓝', '苔绿', '藤紫'],
+    listed: '、',
+    usage: '用法：/focus 终点 | 瓶颈 | 范围（用全角｜或两侧带空格的 | 分隔，范围可省略）；/focus clear 清除',
+    tintUsage: (names: string) => `用法：/focus-color 1-${TINTS.length}，或配色名（${names}）；不带参数则换下一个`,
+    styleUsage: '用法：/focus-style 1（标准）、2（一行）、3（页脚）；不带参数则轮换',
+    langUsage: '用法：/focus-lang zh 或 en；不带参数则切换',
+    tool: '更新输入框上方常驻显示的“三行定位”。开始一项实质性工作前调用；终点、瓶颈或授权范围发生变化时再次调用。',
+    toolGoal: '终点：这件事最终要达成什么（整件事，不是这一步）',
+    toolBottleneck: '瓶颈：现在挡在终点前的唯一约束',
+    toolScope: '授权范围：允许写入的文件、目录或 worktree',
+    focusCommand: '查看或改写终点/瓶颈/授权范围',
+    focusHint: '终点 | 瓶颈 | 范围',
+    styleCommand: '切换定位栏版式：1 标准 / 2 一行 / 3 页脚；不带参数则轮换',
+    tintCommand: '切换定位栏配色；不带参数则换下一个',
+    tintHint: `1-${TINTS.length} 或配色名`,
+    langCommand: '切换定位栏语言：zh 中文 / en 英文；不带参数则切换',
+    noteSet: (told: string) =>
+      `[focus-band] 输入框上方显示的当前定位——${told}。如果这条消息改变了终点、瓶颈或授权范围，先调用 set_focus 更新。`,
+    noteUnset: '[focus-band] 尚未设置定位。如果这条消息开启一项实质性工作，先调用 set_focus 写明终点和瓶颈。',
+    styleSet: (n: number, name: string) => `定位栏版式：${n} ${name}`,
+    tintSet: (n: number, name: string) => `定位栏配色：${n} ${name}`,
+    langSet: '定位栏语言：中文（命令说明下个会话生效）',
+    deny: 'set_focus 需要非空的 goal 和 bottleneck。',
+    updated: (told: string) => `已更新定位。${told}`,
+    unset: (usage: string) => `尚未设定。${usage}`,
+    cleared: '已清除定位。',
+    both: (usage: string) => `终点和瓶颈都要填。${usage}`,
+    tintAlt: (name: string) => `配色：${name}`,
+    used: (figure: string) => `已用 ${figure}`,
+    told: (one: Focus) => `终点：${one.goal}；瓶颈：${one.bottleneck}；范围：${one.scope || '未指定'}`,
+  },
+  en: {
+    goal: 'Goal',
+    bottleneck: 'Bottleneck',
+    scope: 'Scope',
+    styles: ['', 'standard', 'one line', 'footer'],
+    tints: ['Default', 'Ink', 'Sand', 'Clay', 'Blue', 'Moss', 'Violet'],
+    listed: ', ',
+    usage: 'Usage: /focus goal | bottleneck | scope (separate with " | "; scope is optional); /focus clear removes it',
+    tintUsage: (names: string) => `Usage: /focus-color 1-${TINTS.length}, or a color name (${names}); no argument picks the next one`,
+    styleUsage: 'Usage: /focus-style 1 (standard), 2 (one line), 3 (footer); no argument cycles',
+    langUsage: 'Usage: /focus-lang zh or en; no argument switches',
+    tool: 'Update the focus shown above the prompt box. Call it before starting substantial work, and again whenever the goal, the bottleneck or the write scope changes.',
+    toolGoal: 'Goal: what the whole task must achieve in the end (the task, not this step)',
+    toolBottleneck: 'Bottleneck: the one constraint standing between now and the goal',
+    toolScope: 'Scope: the files, directories or worktree that may be written',
+    focusCommand: 'Show or set the goal / bottleneck / write scope',
+    focusHint: 'goal | bottleneck | scope',
+    styleCommand: 'Switch the band layout: 1 standard / 2 one line / 3 footer; no argument cycles',
+    tintCommand: 'Switch the band color; no argument picks the next one',
+    tintHint: `1-${TINTS.length} or a color name`,
+    langCommand: 'Switch the band language: zh / en; no argument switches',
+    noteSet: (told: string) =>
+      `[focus-band] Current focus shown above the prompt box: ${told}. If this message changes the goal, the bottleneck or the write scope, call set_focus first.`,
+    noteUnset:
+      '[focus-band] No focus is set. If this message starts substantial work, call set_focus first with the goal and the bottleneck.',
+    styleSet: (n: number, name: string) => `Band layout: ${n} ${name}`,
+    tintSet: (n: number, name: string) => `Band color: ${n} ${name}`,
+    langSet: 'Band language: English (command descriptions change next session)',
+    deny: 'set_focus needs a non-empty goal and bottleneck.',
+    updated: (told: string) => `Focus updated. ${told}`,
+    unset: (usage: string) => `No focus set. ${usage}`,
+    cleared: 'Focus cleared.',
+    both: (usage: string) => `Both goal and bottleneck are required. ${usage}`,
+    tintAlt: (name: string) => `Color: ${name}`,
+    used: (figure: string) => `${figure} used`,
+    told: (one: Focus) => `Goal: ${one.goal}; Bottleneck: ${one.bottleneck}; Scope: ${one.scope || 'not set'}`,
+  },
+}
 const MAX_LENGTH = 200
 const DAY = 24 * 60 * 60 * 1000
 const MINUTE = 60 * 1000
@@ -41,6 +108,7 @@ const style = atom({ plugin: 'focus-band', key: 'style' } as const, 1)
 const tint = atom({ plugin: 'focus-band', key: 'tint' } as const, 0)
 const isReady = atom({ plugin: 'focus-band', key: 'isReady' } as const, false)
 // 现在这条定位属于哪个会话：/clear 和恢复会话会换会话而不重新启动
+const lang = atom({ plugin: 'focus-band', key: 'lang' } as const, 'zh')
 const owner = atom({ plugin: 'focus-band', key: 'owner' } as const, '')
 
 let tick: { cancel(): void } | undefined
@@ -52,6 +120,9 @@ export const register: Register = on => {
       const held = await kept($)
       await update($, style, () => held.style)
       await update($, tint, () => held.tint)
+      await update($, lang, () => held.lang)
+      // 猜出来的语言记下来，以后不再猜
+      await $.store.set('lang', held.lang)
       await update($, focus, () => held.focus)
       await update($, owner, () => held.owner)
       await update($, limits, () => held.limits)
@@ -61,35 +132,36 @@ export const register: Register = on => {
     }
 
     const result = await next(e)
+    const t = await words($)
     await $.tool.register({
       name: 'set_focus',
-      description:
-        '更新输入框上方常驻显示的“三行定位”。开始一项实质性工作前调用；终点、瓶颈或授权范围发生变化时再次调用。',
+      description: t.tool,
       inputSchema: {
         type: 'object',
         properties: {
-          goal: { type: 'string', description: '终点：这件事最终要达成什么（整件事，不是这一步）' },
-          bottleneck: { type: 'string', description: '瓶颈：现在挡在终点前的唯一约束' },
-          scope: { type: 'string', description: '授权范围：允许写入的文件、目录或 worktree' },
+          goal: { type: 'string', description: t.toolGoal },
+          bottleneck: { type: 'string', description: t.toolBottleneck },
+          scope: { type: 'string', description: t.toolScope },
         },
         required: ['goal', 'bottleneck'],
       },
     })
     await $.command.register({
       name: 'focus',
-      description: '查看或改写终点/瓶颈/授权范围',
-      argumentHint: '终点 | 瓶颈 | 范围',
+      description: t.focusCommand,
+      argumentHint: t.focusHint,
     })
     await $.command.register({
       name: 'focus-style',
-      description: '切换定位栏版式：1 标准 / 2 一行 / 3 页脚；不带参数则轮换',
+      description: t.styleCommand,
       argumentHint: '1-3',
     })
     await $.command.register({
       name: 'focus-color',
-      description: '切换定位栏配色；不带参数则换下一个',
-      argumentHint: `1-${TINTS.length} 或配色名`,
+      description: t.tintCommand,
+      argumentHint: t.tintHint,
     })
+    await $.command.register({ name: 'focus-lang', description: t.langCommand, argumentHint: 'zh | en' })
 
     await quietly(() => reread($))
     await quietly(() => prune($))
@@ -121,10 +193,9 @@ export const register: Register = on => {
     let note = ''
 
     try {
-      const current = (await adopt($)).focus
-      note = current
-        ? `[focus-band] 输入框上方显示的当前定位——${describe(current)}。如果这条消息改变了终点、瓶颈或授权范围，先调用 set_focus 更新。`
-        : '[focus-band] 尚未设置定位。如果这条消息开启一项实质性工作，先调用 set_focus 写明终点和瓶颈。'
+      const seen = await adopt($)
+      const t = TEXT[seen.lang]
+      note = seen.focus ? t.noteSet(t.told(seen.focus)) : t.noteUnset
     } catch {
       // 读不到就不附
     }
@@ -165,9 +236,10 @@ export const register: Register = on => {
 
   on('command.run', { command: 'focus-style' }, async ($, e) => {
     const args = (e.args ?? '').trim()
+    const t = await words($)
 
     if (args !== '' && !/^[123]$/.test(args)) {
-      return { text: STYLE_USAGE }
+      return { text: t.styleUsage }
     }
 
     const current = await read($, style)
@@ -175,51 +247,70 @@ export const register: Register = on => {
     await update($, style, () => picked)
     await $.store.set('style', picked)
 
-    return { text: `定位栏版式：${picked} ${STYLES[picked]}` }
+    return { text: t.styleSet(picked, t.styles[picked]) }
   })
 
   on('command.run', { command: 'focus-color' }, async ($, e) => {
     const args = (e.args ?? '').trim()
-    const byName = TINTS.findIndex(one => one.name === args)
+    const t = await words($)
+    // 配色名两种语言都认
+    const named = (names: string[]) => names.findIndex(name => name.toLowerCase() === args.toLowerCase())
+    const byName = Math.max(named(TEXT.zh.tints), named(TEXT.en.tints))
     const byNumber = /^\d+$/.test(args) ? Number(args) - 1 : -1
     const asked = byName >= 0 ? byName : byNumber
 
     if (args !== '' && TINTS[asked] === undefined) {
-      return { text: TINT_USAGE }
+      return { text: t.tintUsage(t.tints.join(t.listed)) }
     }
 
     const picked = args === '' ? await nextTint($) : await setTint($, asked)
 
-    return { text: `定位栏配色：${picked + 1} ${TINTS[picked].name}` }
+    return { text: t.tintSet(picked + 1, t.tints[picked]) }
+  })
+
+  on('command.run', { command: 'focus-lang' }, async ($, e) => {
+    const args = (e.args ?? '').trim().toLowerCase()
+
+    if (args !== '' && args !== 'zh' && args !== 'en') {
+      return { text: (await words($)).langUsage }
+    }
+
+    const picked: Lang = args === '' ? ((await read($, lang)) === 'zh' ? 'en' : 'zh') : args
+    await update($, lang, () => picked)
+    await $.store.set('lang', picked)
+
+    return { text: TEXT[picked].langSet }
   })
 
   on('tool.call', { tool: TOOL }, async ($, e) => {
     const goal = clean(e.goal)
     const bottleneck = clean(e.bottleneck)
+    const t = await words($)
 
     if (!goal || !bottleneck) {
-      return { deny: 'set_focus 需要非空的 goal 和 bottleneck。' }
+      return { deny: t.deny }
     }
 
     const next: Focus = { goal, bottleneck, scope: clean(e.scope) }
     await setFocus($, next)
 
-    return { result: `已更新定位。${describe(next)}` }
+    return { result: t.updated(t.told(next)) }
   })
 
   on('command.run', { command: 'focus' }, async ($, e) => {
     const args = (e.args ?? '').trim()
+    const t = await words($)
 
     if (args === '') {
       const current = (await adopt($)).focus
 
-      return { text: current ? describe(current) : `尚未设定。${USAGE}` }
+      return { text: current ? t.told(current) : t.unset(t.usage) }
     }
 
     if (args.toLowerCase() === 'clear' || args === '清除') {
       await setFocus($, null)
 
-      return { text: '已清除定位。' }
+      return { text: t.cleared }
     }
 
     // 内容里的 || 或管道符不算分隔；第三段之后都并入范围
@@ -228,13 +319,13 @@ export const register: Register = on => {
     const bottleneck = clean(second)
 
     if (!goal || !bottleneck) {
-      return { text: `终点和瓶颈都要填。${USAGE}` }
+      return { text: t.both(t.usage) }
     }
 
     const next: Focus = { goal, bottleneck, scope: clean(rest.join(' | ')) }
     await setFocus($, next)
 
-    return { text: `已更新定位。${describe(next)}` }
+    return { text: t.updated(t.told(next)) }
   })
 
   // 页脚右侧、模型名旁边的那一组弱化标签：版式 3 把额度放在这里
@@ -252,7 +343,7 @@ export const register: Register = on => {
     return (
       <Box flexDirection="row" gap={2} alignItems="center">
         {e.props.modes.length > 0 && <Text dimColor>{e.props.modes.join(' & ')}</Text>}
-        {meters(table, e.surface, windows, 'ring', (TINTS[seen.tint] ?? TINTS[0]).accent, await $.clock.now(), false)}
+        {meters(table, e.surface, windows, 'ring', TINTS[seen.tint] ?? TINTS[0], await $.clock.now(), false, TEXT[seen.lang])}
       </Box>
     )
   })
@@ -273,7 +364,9 @@ export const register: Register = on => {
     const table = $.ui.resolve(e) as any
     const { Box, Text, Button } = table
     const columns = e.props.bodyColumns
-    const palette = TINTS[seen.tint] ?? TINTS[0]
+    const accent = TINTS[seen.tint] ?? TINTS[0]
+    const t = TEXT[seen.lang]
+    const tintName = t.tints[seen.tint] ?? t.tints[0]
     const now = await $.clock.now()
     // 外框：右侧常驻换色按钮
     const framed = (body: unknown) => (
@@ -288,13 +381,13 @@ export const register: Register = on => {
             // 按钮宽不过图片，所以图片两侧各留一格透明边，按钮框才围得住螃蟹；叠放层铺满并居中
             // 右边再留一格，免得框被内容区的边界裁掉
             <Box alignItems="center" marginRight={1}>
-              <table.Svg source={CRAB} alt={`配色：${palette.name}`} width={28} height={16} />
+              <table.Svg source={CRAB} alt={t.tintAlt(tintName)} width={28} height={16} />
               <Box position="absolute" top={0} left={0} width="100%" height="100%" alignItems="center" justifyContent="center">
                 <Button key={`tint${seen.tint}`} label={'\u2003\u2005'} plain onPress={() => void quietly(() => nextTint($))} />
               </Box>
             </Box>
           ) : (
-            <Button key="tint" label={palette.name} plain dimColor onPress={() => void quietly(() => nextTint($))} />
+            <Button key="tint" label={tintName} plain dimColor onPress={() => void quietly(() => nextTint($))} />
           )}
         </Box>
       </Box>
@@ -314,16 +407,16 @@ export const register: Register = on => {
         <Box flexDirection="column">
           {current !== null && (
             <Box flexDirection="row" gap={1}>
-              {item('终点', current.goal)}
+              {item(t.goal, current.goal)}
               {dot}
-              {item('瓶颈', current.bottleneck)}
+              {item(t.bottleneck, current.bottleneck)}
               {current.scope !== '' && dot}
-              {current.scope !== '' && item('范围', current.scope)}
+              {current.scope !== '' && item(t.scope, current.scope)}
             </Box>
           )}
           {hasQuota && (
             <Box flexDirection="row" gap={1} alignItems="center">
-              {meters(table, e.surface, windows, columns >= 36 ? 'bar' : 'none', palette.accent, now, columns >= 50, dot)}
+              {meters(table, e.surface, windows, columns >= 36 ? 'bar' : 'none', accent, now, columns >= 50, t, dot)}
             </Box>
           )}
         </Box>,
@@ -340,7 +433,7 @@ export const register: Register = on => {
           </Text>
         )}
         <Box flexGrow={1} />
-        {hasQuota && meters(table, e.surface, windows, 'ring', palette.accent, now, false)}
+        {hasQuota && meters(table, e.surface, windows, 'ring', accent, now, false, t)}
       </Box>,
     )
   })
@@ -355,6 +448,7 @@ function meters(
   accent: string,
   now: number,
   hasTime: boolean,
+  t: (typeof TEXT)[Lang],
   separator?: unknown,
 ) {
   const { Box, Text } = table
@@ -376,8 +470,8 @@ function meters(
       <Box key={one.kind} flexDirection="row" gap={1} flexShrink={0} alignItems="center">
         {i > 0 && separator}
         <Text dimColor>{WINDOWS[one.kind]}</Text>
-        {shape === 'ring' && Svg && <Svg source={ring(used, stroke)} alt={`已用 ${figure}`} width={14} height={14} />}
-        {shape === 'bar' && Svg && <Svg source={bar(used, stroke)} alt={`已用 ${figure}`} width={BAR} height={6} />}
+        {shape === 'ring' && Svg && <Svg source={ring(used, stroke)} alt={t.used(figure)} width={14} height={14} />}
+        {shape === 'bar' && Svg && <Svg source={bar(used, stroke)} alt={t.used(figure)} width={BAR} height={6} />}
         {shape === 'bar' && !Svg && (
           <Text>
             {filled > 0 && <Text color={color}>{'█'.repeat(filled)}</Text>}
@@ -424,11 +518,12 @@ function ring(used: number, stroke: string): string {
   )
 }
 
-type View = { style: number; tint: number; focus: Focus | null; owner: string; limits: RateLimit[] }
+type View = { style: number; tint: number; lang: Lang; focus: Focus | null; owner: string; limits: RateLimit[] }
 
 // 上次存下的版式、配色、本会话的定位和额度
 async function kept($: EngineInterface): Promise<View> {
   const [keptStyle, keptTint, keptLimits] = [await $.store.get('style'), await $.store.get('tint'), await $.store.get('limits')]
+  const keptLang = await $.store.get('lang')
   let keptFocus: Focus | null = null
   let session = ''
 
@@ -442,6 +537,7 @@ async function kept($: EngineInterface): Promise<View> {
   return {
     style: keptStyle === 1 || keptStyle === 2 || keptStyle === 3 ? keptStyle : 1,
     tint: typeof keptTint === 'number' && TINTS[keptTint] !== undefined ? keptTint : 0,
+    lang: keptLang === 'zh' || keptLang === 'en' ? keptLang : await guess($),
     focus: keptFocus,
     owner: session,
     limits: Array.isArray(keptLimits) ? keptLimits.filter(isLimit) : [],
@@ -461,6 +557,7 @@ async function view($: EngineInterface): Promise<View> {
   const seen: View = {
     style: await read($, style),
     tint: await read($, tint),
+    lang: await read($, lang),
     focus: await read($, focus),
     owner: await read($, owner),
     limits: await read($, limits),
@@ -491,6 +588,33 @@ async function adopt($: EngineInterface) {
   }
 
   return seen
+}
+
+const words = async ($: EngineInterface) => TEXT[(await view($)).lang]
+
+// 没选过语言时：系统是中文、或以前写过的定位里有中文，就用中文；否则英文
+async function guess($: EngineInterface): Promise<Lang> {
+  try {
+    if (/^zh/i.test(Intl.DateTimeFormat().resolvedOptions().locale)) {
+      return 'zh'
+    }
+  } catch {
+    // 没有就只看定位
+  }
+
+  try {
+    for (const key of (await $.store.keys()).filter(key => key.startsWith('focus:'))) {
+      const held = asFocus(await $.store.get(key))
+
+      if (/[\u4e00-\u9fff]/.test(`${held?.goal ?? ''}${held?.bottleneck ?? ''}`)) {
+        return 'zh'
+      }
+    }
+  } catch {
+    // 读不到就按英文
+  }
+
+  return 'en'
 }
 
 // 界面事件里出的错不该冒到引擎去
@@ -607,8 +731,4 @@ function clean(value: unknown): string {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, MAX_LENGTH)
-}
-
-function describe(one: Focus): string {
-  return `终点：${one.goal}；瓶颈：${one.bottleneck}；范围：${one.scope || '未指定'}`
 }

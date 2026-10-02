@@ -8,7 +8,7 @@ function world(on: any, store: Record<string, unknown> = {}, limits: any[] = [])
   // 可以中途改的会话标识和读数
   const live = { session: 's1', limits }
   // 自己的内存存储，好让测试看到写入了什么
-  const kept: Record<string, unknown> = { ...store }
+  const kept: Record<string, unknown> = { lang: 'zh', ...store }
   on('store.get', ($: any, e: any) => ({ value: kept[e.key] }))
   on('store.set', ($: any, e: any) => {
     kept[e.key] = e.value
@@ -311,6 +311,33 @@ describe('focus-band', () => {
     await ui.press({ key: 'tint' })
     expect(kept.tint).toBe(1)
     await ui.unmount()
+  })
+
+  test('英文界面：标签、命令回复、给模型的那句话都是英文；可切换；没选过时按已有定位猜', async ($: any, on: any) => {
+    const { kept } = world(on, { lang: 'en' }, [{ kind: 'five_hour', percentUsed: 40 }])
+    await start($)
+    expect(String((await setFocus($, { goal: 'ship it', bottleneck: 'tests' })).result)).toMatch(/Focus updated\. Goal: ship it/)
+    const ui = await mount($, 'desktop')
+    expect(await ui.find({ type: 'Text', text: /^Goal $/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /终点|瓶颈/ })).toBeUndefined()
+    await ui.unmount()
+    expect((await $.command.run({ command: 'focus-color', args: 'clay' })).text).toMatch(/4 Clay/)
+    expect((await $.command.run({ command: 'focus-color', args: '雾蓝' })).text).toMatch(/5 Blue/)
+    expect(((await $.prompt.submit({ text: 'hi' })).context as string[])[0]).toMatch(/Current focus/)
+
+    const lang = async (args?: string) => (await $.command.run({ command: 'focus-lang', args })).text as string
+    expect(await lang('fr')).toMatch(/Usage/)
+    expect(await lang()).toMatch(/中文/)
+    expect(kept.lang).toBe('zh')
+    const zh = await mount($, 'desktop')
+    expect(await zh.find({ type: 'Text', text: /^终点 $/ })).toBeDefined()
+    await zh.unmount()
+  })
+
+  test('没选过语言：以前的定位里有中文就用中文，并记下来', async ($: any, on: any) => {
+    const { kept } = world(on, { lang: undefined, 'focus:old': { goal: '旧终点', bottleneck: '旧瓶颈', scope: '' } })
+    await start($)
+    expect(kept.lang).toBe('zh')
   })
 
   test('/focus 的解析与存储', async ($: any, on: any) => {

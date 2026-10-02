@@ -1,9 +1,7 @@
 export type RateLimit = { kind: string; percentUsed: number; resetsAt?: string }
-export type Focus = { goal: string; bottleneck: string; scope: string }
 
 declare module 'claude-code' {
   interface PluginState {
-    'focus-band': { focus: Focus | null; style: number; tint: number; lang: 'zh' | 'en'; isReady: boolean
-    owner: string; limits: RateLimit[] }
+    'focus-band': { style: number; tint: number; lang: 'zh' | 'en'; isReady: boolean; limits: RateLimit[] }
   }
 }

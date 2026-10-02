@@ -1,7 +1,7 @@
 {
   "name": "focus-band",
-  "version": "0.15.3",
-  "description": "输入框上方常驻显示：当前的终点/瓶颈/授权范围，以及额度用量。",
+  "version": "0.16.0",
+  "description": "输入框上方常驻显示 5h / 7d 额度用量：进度条、百分比、重置时间。",
   "author": {
     "name": "sc"
   },

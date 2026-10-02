@@ -2,13 +2,15 @@
 
 English | [中文](README.zh.md)
 
-A Claude Code mod that keeps one band above the prompt box in the desktop app: the current goal / bottleneck / write scope, plus your 5h and 7d usage limits.
+A Claude Code mod that keeps your usage limits in view above the prompt box in the desktop app: the 5h and 7d windows, each with a thin progress bar, the percentage and the reset time.
 
 ![Screenshot](docs/screenshot.png)
 
-Status: 0.15.3. `claude plugin validate` passes, `claude plugin test` passes 15 tests.
+Status: 0.16.0. `claude plugin validate` passes, `claude plugin test` passes 6 tests.
 
-The interface comes in English and Chinese. It picks Chinese when the system locale is Chinese (or an earlier focus was written in Chinese) and English otherwise; `/focus lang` switches.
+The bar turns orange from 80% and red from 90%; the numbers stay in the text color. Once a window's reset time has passed, its figure shows `—` until a fresh reading arrives.
+
+Earlier versions also showed a goal / bottleneck / scope line above the bars (the screenshot still shows it). It was removed in 0.16.0: it depended on the model keeping it current and went stale too often.
 
 ## Install
 
@@ -24,18 +26,18 @@ Layout: `.claude-plugin/plugin.json` (manifest), `hooks/register.tsx` (all the l
 
 ## Usage
 
-- `/focus goal | bottleneck | scope`: set the focus; no argument shows it; `/focus clear` removes it
-- `/focus style 1|2|3`: standard / one line / footer
-- `/focus lang zh|en`: interface language; no argument switches
-- `/focus color`: change the progress-bar color (on desktop, clicking the small crab on the right does the same)
-- The model updates the focus with the `set_focus` tool; each prompt carries one line with the current focus for the model (the user never sees it)
+One command, three subcommands; without a value each picks the next option:
+
+- `/band color [1-7 | name]`: progress-bar color (on desktop, clicking the small crab on the right does the same)
+- `/band style [1 | 2]`: where it sits, 1 above the prompt box, 2 in the footer next to the model name
+- `/band lang [zh | en]`: language of the command replies; defaults to Chinese when the system locale is Chinese, English otherwise
 
 ## Known limits (by design of the host, not a to-do list)
 
-- The grey backing is drawn by the desktop app. A mod cannot change its color, corner radius or height, and cannot draw outside its own row
+- The grey backing is drawn by the desktop app. A mod cannot change its color, corner radius or height
 - Usage figures come from the last model response, so they lag behind the usage panel while this session is idle or another session is spending
 - A row is about 19px tall; a taller icon makes the band taller. The button's focus ring is clipped at the top and bottom
-- Styles 2 and 3 do not show the scope (intentional)
+- The desktop app only picked up the first slash command a mod registers, which is why everything lives under `/band`
 
 ## After changing the code
 

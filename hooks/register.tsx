@@ -1,11 +1,11 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { Focus, RateLimit } from '../types'
+import type { RateLimit } from '../types'
 
-// 平时不上色，只有接近上限时才用主题里的警告色和错误色。
-// 桌面端的用量面板在 94% 时已经是红色（实测），所以 90 起用错误色；页脚圆环的 80 / 95 是另一套
-// stroke 是桌面端小圆环的颜色：矢量图读不到主题，所以用深浅主题下都看得清的中间调
+// 进度条平时用所选配色，接近上限时换成警告色、错误色；数字始终是正文色。
+// 桌面端的用量面板在 94% 时已经是红色（实测），所以 90 起用错误色；页脚圆环的 80 / 95 是另一套。
+// stroke 是矢量图里的颜色：矢量图读不到主题，所以用深浅主题下都看得清的中间调
 const LEVELS = [
   { upTo: 80, color: undefined, stroke: undefined },
   { upTo: 90, color: 'warning', stroke: '#d9822b' },
@@ -17,98 +17,59 @@ const BAR = 72
 const TINTS = ['#6f6f6f', '#3a3a3a', '#8a7a63', '#d97757', '#4a6fd8', '#5b8a5a', '#7b61c9']
 // 只画认识的窗口，其余不显示
 const WINDOWS: Record<string, string> = { five_hour: '5h', seven_day: '7d', spend_limit: '$' }
-const TOOL = 'mcp__focus-band__set_focus'
+const MINUTE = 60 * 1000
+const DAY = 24 * 60 * MINUTE
+const MAX_LENGTH = 200
 
 type Lang = 'zh' | 'en'
 
-// 界面文字：中文和英文各一套。配色名、版式名按序号对应 TINTS 和版式 1-3
+// 界面文字：中文和英文各一套。配色名、位置名按序号对应 TINTS 和位置 1-2
 const TEXT = {
   zh: {
-    goal: '终点',
-    bottleneck: '瓶颈',
-    scope: '范围',
-    styles: ['', '标准', '一行', '页脚'],
+    styles: ['', '输入框上方', '页脚'],
     tints: ['默认', '墨黑', '暖沙', '陶土', '雾蓝', '苔绿', '藤紫'],
     listed: '、',
-    usage: '用法：/focus 终点 | 瓶颈 | 范围（用全角｜或两侧带空格的 | 分隔，范围可省略）；/focus clear 清除；/focus style、/focus color、/focus lang 改版式、配色、语言',
-    tintUsage: (names: string) => `用法：/focus color 1-${TINTS.length}，或配色名（${names}）；不带参数则换下一个`,
-    styleUsage: '用法：/focus style 1（标准）、2（一行）、3（页脚）；不带参数则轮换',
-    langUsage: '用法：/focus lang zh 或 en；不带参数则切换',
-    tool: '更新输入框上方常驻显示的“三行定位”。开始一项实质性工作前调用；终点、瓶颈或授权范围发生变化时再次调用。',
-    toolGoal: '终点：这件事最终要达成什么（整件事，不是这一步）',
-    toolBottleneck: '瓶颈：现在挡在终点前的唯一约束',
-    toolScope: '授权范围：允许写入的文件、目录或 worktree',
-    focusCommand: '查看或改写终点/瓶颈/授权范围；style、color、lang 改版式、配色、语言',
-    focusHint: '终点 | 瓶颈 | 范围',
-    noteSet: (told: string) =>
-      `[focus-band] 输入框上方显示的当前定位——${told}。如果这条消息改变了终点、瓶颈或授权范围，先调用 set_focus 更新。`,
-    noteUnset: '[focus-band] 尚未设置定位。如果这条消息开启一项实质性工作，先调用 set_focus 写明终点和瓶颈。',
-    styleSet: (n: number, name: string) => `定位栏版式：${n} ${name}`,
-    tintSet: (n: number, name: string) => `定位栏配色：${n} ${name}`,
-    langSet: '定位栏语言：中文（命令说明下个会话生效）',
-    deny: 'set_focus 需要非空的 goal 和 bottleneck。',
-    updated: (told: string) => `已更新定位。${told}`,
-    unset: (usage: string) => `尚未设定。${usage}`,
-    cleared: '已清除定位。',
-    both: (usage: string) => `终点和瓶颈都要填。${usage}`,
+    command: '额度栏：color 换配色 / style 换位置 / lang 换语言',
+    hint: 'color | style | lang',
+    usage: '用法：/band color [1-7 或配色名]、/band style [1 输入框上方 | 2 页脚]、/band lang [zh | en]；不带值则换下一个',
+    tintUsage: (names: string) => `用法：/band color 1-${TINTS.length}，或配色名（${names}）；不带参数则换下一个`,
+    styleUsage: '用法：/band style 1（输入框上方）或 2（页脚）；不带参数则切换',
+    langUsage: '用法：/band lang zh 或 en；不带参数则切换',
+    styleSet: (n: number, name: string) => `额度栏位置：${n} ${name}`,
+    tintSet: (n: number, name: string) => `额度栏配色：${n} ${name}`,
+    langSet: '额度栏语言：中文（命令说明下个会话生效）',
     tintAlt: (name: string) => `配色：${name}`,
     used: (figure: string) => `已用 ${figure}`,
-    told: (one: Focus) => `终点：${one.goal}；瓶颈：${one.bottleneck}；范围：${one.scope || '未指定'}`,
   },
   en: {
-    goal: 'Goal',
-    bottleneck: 'Bottleneck',
-    scope: 'Scope',
-    styles: ['', 'standard', 'one line', 'footer'],
+    styles: ['', 'above the prompt', 'footer'],
     tints: ['Default', 'Ink', 'Sand', 'Clay', 'Blue', 'Moss', 'Violet'],
     listed: ', ',
-    usage: 'Usage: /focus goal | bottleneck | scope (separate with " | "; scope is optional); /focus clear removes it; /focus style, /focus color and /focus lang change layout, color and language',
-    tintUsage: (names: string) => `Usage: /focus color 1-${TINTS.length}, or a color name (${names}); no argument picks the next one`,
-    styleUsage: 'Usage: /focus style 1 (standard), 2 (one line), 3 (footer); no argument cycles',
-    langUsage: 'Usage: /focus lang zh or en; no argument switches',
-    tool: 'Update the focus shown above the prompt box. Call it before starting substantial work, and again whenever the goal, the bottleneck or the write scope changes.',
-    toolGoal: 'Goal: what the whole task must achieve in the end (the task, not this step)',
-    toolBottleneck: 'Bottleneck: the one constraint standing between now and the goal',
-    toolScope: 'Scope: the files, directories or worktree that may be written',
-    focusCommand: 'Show or set the goal / bottleneck / write scope; style, color, lang change the band',
-    focusHint: 'goal | bottleneck | scope',
-    noteSet: (told: string) =>
-      `[focus-band] Current focus shown above the prompt box: ${told}. If this message changes the goal, the bottleneck or the write scope, call set_focus first.`,
-    noteUnset:
-      '[focus-band] No focus is set. If this message starts substantial work, call set_focus first with the goal and the bottleneck.',
-    styleSet: (n: number, name: string) => `Band layout: ${n} ${name}`,
+    command: 'Usage band: color / style (where it sits) / lang',
+    hint: 'color | style | lang',
+    usage: 'Usage: /band color [1-7 or a name], /band style [1 above the prompt | 2 footer], /band lang [zh | en]; no value picks the next one',
+    tintUsage: (names: string) => `Usage: /band color 1-${TINTS.length}, or a color name (${names}); no argument picks the next one`,
+    styleUsage: 'Usage: /band style 1 (above the prompt) or 2 (footer); no argument switches',
+    langUsage: 'Usage: /band lang zh or en; no argument switches',
+    styleSet: (n: number, name: string) => `Band position: ${n} ${name}`,
     tintSet: (n: number, name: string) => `Band color: ${n} ${name}`,
-    langSet: 'Band language: English (command descriptions change next session)',
-    deny: 'set_focus needs a non-empty goal and bottleneck.',
-    updated: (told: string) => `Focus updated. ${told}`,
-    unset: (usage: string) => `No focus set. ${usage}`,
-    cleared: 'Focus cleared.',
-    both: (usage: string) => `Both goal and bottleneck are required. ${usage}`,
+    langSet: 'Band language: English (the command description changes next session)',
     tintAlt: (name: string) => `Color: ${name}`,
     used: (figure: string) => `${figure} used`,
-    told: (one: Focus) => `Goal: ${one.goal}; Bottleneck: ${one.bottleneck}; Scope: ${one.scope || 'not set'}`,
   },
 }
-const MAX_LENGTH = 200
-const DAY = 24 * 60 * 60 * 1000
-const MINUTE = 60 * 1000
-// 每个会话存一条定位，只留最近的这么多条
-const KEPT_SESSIONS = 50
 
-const focus = atom({ plugin: 'focus-band', key: 'focus' } as const, null)
 const limits = atom({ plugin: 'focus-band', key: 'limits' } as const, [])
 const style = atom({ plugin: 'focus-band', key: 'style' } as const, 1)
 const tint = atom({ plugin: 'focus-band', key: 'tint' } as const, 0)
-const isReady = atom({ plugin: 'focus-band', key: 'isReady' } as const, false)
-// 现在这条定位属于哪个会话：/clear 和恢复会话会换会话而不重新启动
 const lang = atom({ plugin: 'focus-band', key: 'lang' } as const, 'zh')
-const owner = atom({ plugin: 'focus-band', key: 'owner' } as const, '')
+const isReady = atom({ plugin: 'focus-band', key: 'isReady' } as const, false)
 
 let tick: { cancel(): void } | undefined
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    // 先把上次存下的读回来，栏才能第一时间出现；读不到也不能耽误后面注册工具和命令
+    // 先把上次存下的读回来，栏才能第一时间出现；读不到也不能耽误后面
     try {
       const held = await kept($)
       await update($, style, () => held.style)
@@ -116,8 +77,6 @@ export const register: Register = on => {
       await update($, lang, () => held.lang)
       // 猜出来的语言记下来，以后不再猜
       await $.store.set('lang', held.lang)
-      await update($, focus, () => held.focus)
-      await update($, owner, () => held.owner)
       await update($, limits, () => held.limits)
       await update($, isReady, () => true)
     } catch {
@@ -125,60 +84,16 @@ export const register: Register = on => {
     }
 
     const result = await next(e)
-    const t = await words($)
-    await $.tool.register({
-      name: 'set_focus',
-      description: t.tool,
-      inputSchema: {
-        type: 'object',
-        properties: {
-          goal: { type: 'string', description: t.toolGoal },
-          bottleneck: { type: 'string', description: t.toolBottleneck },
-          scope: { type: 'string', description: t.toolScope },
-        },
-        required: ['goal', 'bottleneck'],
-      },
-    })
     await quietly(() => reread($))
-    await quietly(() => prune($))
+    await quietly(() => forget($))
     // 重置时刻会过去：每分钟重画一次，过期的窗口才会及时变成“—”
     tick?.cancel()
     tick = $.clock.every(MINUTE, () => $.ui.invalidate('ui.render'))
-    // 只注册一条命令，版式、配色、语言都是它的子命令：桌面端只认到一个插件的第一条命令
-    await $.command.register({ name: 'focus', description: t.focusCommand, argumentHint: t.focusHint })
+    // 只注册一条命令：桌面端只认到一个插件的第一条命令
+    const t = await words($)
+    await $.command.register({ name: 'band', description: t.command, argumentHint: t.hint })
 
     return result
-  })
-
-  // /clear 和恢复会话不会重新启动，只会走到这里：稍后重画一次，栏上换成新会话自己的定位
-  on('session.end', async ($, e, next) => {
-    const result = await next(e)
-
-    try {
-      $.clock.after(1000, () => $.ui.invalidate('ui.render'))
-    } catch {
-      // 真退出时定时器起不来也无妨
-    }
-
-    return result
-  })
-
-  // 让模型不用先搜索就能调用 set_focus
-  on('tool.describe', { tool: TOOL }, async ($, e, next) => ({ ...(await next(e)), isDeferred: false }))
-
-  // 每条提示后面附一句当前定位，只有模型看得到：定位才不会停在上一件事上
-  on('prompt.submit', async ($, e, next) => {
-    let note = ''
-
-    try {
-      const seen = await adopt($)
-      const t = TEXT[seen.lang]
-      note = seen.focus ? t.noteSet(t.told(seen.focus)) : t.noteUnset
-    } catch {
-      // 读不到就不附
-    }
-
-    return next(note === '' ? e : { ...e, context: [...(e.context ?? []), note] })
   })
 
   // 额度变化由引擎推送：每个主对话回合之后，以及某个窗口移动一个整点时
@@ -212,34 +127,9 @@ export const register: Register = on => {
     return result
   })
 
-  on('tool.call', { tool: TOOL }, async ($, e) => {
-    const goal = clean(e.goal)
-    const bottleneck = clean(e.bottleneck)
-    const t = await words($)
-
-    if (!goal || !bottleneck) {
-      return { deny: t.deny }
-    }
-
-    const next: Focus = { goal, bottleneck, scope: clean(e.scope) }
-    await setFocus($, next)
-
-    return { result: t.updated(t.told(next)) }
-  })
-
-  on('command.run', { command: 'focus' }, async ($, e) => {
-    const args = (e.args ?? '').trim()
-    const t = await words($)
-
-    if (args === '') {
-      const current = (await adopt($)).focus
-
-      return { text: current ? t.told(current) : t.unset(t.usage) }
-    }
-
-    // 子命令：style / color / lang，后面跟参数或留空
-    const [head = '', ...tail] = args.split(/\s+/)
-    const sub = /\s\|\s|｜/.test(args) ? '' : head.toLowerCase()
+  on('command.run', { command: 'band' }, async ($, e) => {
+    const [head = '', ...tail] = (e.args ?? '').trim().split(/\s+/)
+    const sub = head.toLowerCase()
     const given = tail.join(' ')
 
     if (sub === 'style') {
@@ -254,33 +144,15 @@ export const register: Register = on => {
       return runLang($, given)
     }
 
-    if (args.toLowerCase() === 'clear' || args === '清除') {
-      await setFocus($, null)
-
-      return { text: t.cleared }
-    }
-
-    // 内容里的 || 或管道符不算分隔；第三段之后都并入范围
-    const [first = '', second = '', ...rest] = args.split(/\s+\|\s+|\s*｜\s*/)
-    const goal = clean(first)
-    const bottleneck = clean(second)
-
-    if (!goal || !bottleneck) {
-      return { text: t.both(t.usage) }
-    }
-
-    const next: Focus = { goal, bottleneck, scope: clean(rest.join(' | ')) }
-    await setFocus($, next)
-
-    return { text: t.updated(t.told(next)) }
+    return { text: (await words($)).usage }
   })
 
-  // 页脚右侧、模型名旁边的那一组弱化标签：版式 3 把额度放在这里
+  // 页脚右侧、模型名旁边的那一组弱化标签：位置 2 把额度放在这里
   on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
     const seen = await view($)
     const windows = known(seen.limits)
 
-    if (seen.style !== 3 || windows.length === 0) {
+    if (seen.style !== 2 || windows.length === 0) {
       return next(e)
     }
 
@@ -297,29 +169,32 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const seen = await view($)
-    const current = seen.focus
     const windows = known(seen.limits)
-    const asked = seen.style
-    // 标准版有定位时要两行，放不下就退回一行
-    const picked = asked === 1 && current !== null && windows.length > 0 && e.props.maxRows < 2 ? 2 : asked
-    const hasQuota = windows.length > 0 && picked !== 3
 
-    if (e.props.hasSurvey || (current === null && !hasQuota)) {
+    if (e.props.hasSurvey || seen.style !== 1 || windows.length === 0) {
       return next(e)
     }
 
     const table = $.ui.resolve(e) as any
     const { Box, Text, Button } = table
     const columns = e.props.bodyColumns
-    const accent = TINTS[seen.tint] ?? TINTS[0]
     const t = TEXT[seen.lang]
     const tintName = t.tints[seen.tint] ?? t.tints[0]
-    const now = await $.clock.now()
-    // 外框：右侧常驻换色按钮
-    const framed = (body: unknown) => (
+
+    return (
       <Box key="band" flexDirection="row" gap={1} alignItems="center">
-        <Box flexDirection="column" flexGrow={1} flexShrink={1} minWidth={0}>
-          {body}
+        <Box flexDirection="row" gap={1} alignItems="center" flexGrow={1} flexShrink={1} minWidth={0}>
+          {meters(
+            table,
+            e.surface,
+            windows,
+            columns >= 36 ? 'bar' : 'none',
+            TINTS[seen.tint] ?? TINTS[0],
+            await $.clock.now(),
+            columns >= 50,
+            t,
+            <Text dimColor>·</Text>,
+          )}
         </Box>
         <Box flexShrink={0}>
           {e.surface !== 'terminal' && table.Svg ? (
@@ -339,64 +214,18 @@ export const register: Register = on => {
         </Box>
       </Box>
     )
-
-    // 1 标准：带标签的定位一行；额度一行，细进度条加重置时间
-    if (picked === 1) {
-      const dot = <Text dimColor>·</Text>
-      const item = (name: string, value: string) => (
-        <Text wrap="truncate-end">
-          <Text dimColor>{name} </Text>
-          {value}
-        </Text>
-      )
-
-      return framed(
-        // 每一层都要允许收缩到 0，长文字才会被截成省略号，而不是把整行撑出底板、把螃蟹挤走
-        <Box flexDirection="column" minWidth={0}>
-          {current !== null && (
-            <Box flexDirection="row" gap={1} minWidth={0}>
-              {item(t.goal, current.goal)}
-              {dot}
-              {item(t.bottleneck, current.bottleneck)}
-              {current.scope !== '' && dot}
-              {current.scope !== '' && item(t.scope, current.scope)}
-            </Box>
-          )}
-          {hasQuota && (
-            <Box flexDirection="row" gap={1} alignItems="center">
-              {meters(table, e.surface, windows, columns >= 36 ? 'bar' : 'none', accent, now, columns >= 50, t, dot)}
-            </Box>
-          )}
-        </Box>,
-      )
-    }
-
-    // 2 一行 / 3 页脚：一句安静的话，终点弱化在前，瓶颈在后；版式 2 把额度靠右放
-    return framed(
-      <Box flexDirection="row" gap={2} alignItems="center" minWidth={0}>
-        {current !== null && (
-          <Text wrap="truncate-end">
-            {columns >= 60 && <Text dimColor>{current.goal} › </Text>}
-            {current.bottleneck}
-          </Text>
-        )}
-        <Box flexGrow={1} />
-        {hasQuota && meters(table, e.surface, windows, 'ring', accent, now, false, t)}
-      </Box>,
-    )
   })
 }
 
-// /focus 的三个子命令：版式、配色、语言
+// /band 的三个子命令：位置、配色、语言
 async function runStyle($: EngineInterface, args: string) {
   const t = await words($)
 
-  if (args !== '' && !/^[123]$/.test(args)) {
+  if (args !== '' && !/^[12]$/.test(args)) {
     return { text: t.styleUsage }
   }
 
-  const current = await read($, style)
-  const picked = args === '' ? (current % 3) + 1 : Number(args)
+  const picked = args === '' ? ((await read($, style)) === 1 ? 2 : 1) : Number(args)
   await update($, style, () => picked)
   await $.store.set('style', picked)
 
@@ -513,28 +342,21 @@ function ring(used: number, stroke: string): string {
   )
 }
 
-type View = { style: number; tint: number; lang: Lang; focus: Focus | null; owner: string; limits: RateLimit[] }
+type View = { style: number; tint: number; lang: Lang; limits: RateLimit[] }
 
-// 上次存下的版式、配色、本会话的定位和额度
+// 上次存下的位置、配色、语言和额度
 async function kept($: EngineInterface): Promise<View> {
-  const [keptStyle, keptTint, keptLimits] = [await $.store.get('style'), await $.store.get('tint'), await $.store.get('limits')]
-  const keptLang = await $.store.get('lang')
-  let keptFocus: Focus | null = null
-  let session = ''
-
-  try {
-    session = await $.session.id()
-    keptFocus = asFocus(await $.store.get(`focus:${session}`))
-  } catch {
-    // 会话还没绑定时拿不到会话标识，定位先不显示
-  }
+  const [keptStyle, keptTint, keptLang, keptLimits] = [
+    await $.store.get('style'),
+    await $.store.get('tint'),
+    await $.store.get('lang'),
+    await $.store.get('limits'),
+  ]
 
   return {
-    style: keptStyle === 1 || keptStyle === 2 || keptStyle === 3 ? keptStyle : 1,
+    style: keptStyle === 1 || keptStyle === 2 ? keptStyle : 1,
     tint: typeof keptTint === 'number' && TINTS[keptTint] !== undefined ? keptTint : 0,
-    lang: keptLang === 'zh' || keptLang === 'en' ? keptLang : await guess($),
-    focus: keptFocus,
-    owner: session,
+    lang: keptLang === 'zh' || keptLang === 'en' ? keptLang : guess(),
     limits: Array.isArray(keptLimits) ? keptLimits.filter(isLimit) : [],
   }
 }
@@ -549,67 +371,25 @@ async function view($: EngineInterface): Promise<View> {
     }
   }
 
-  const seen: View = {
-    style: await read($, style),
-    tint: await read($, tint),
-    lang: await read($, lang),
-    focus: await read($, focus),
-    owner: await read($, owner),
-    limits: await read($, limits),
-  }
-
-  // /clear 或恢复会话之后会话换了：画新会话自己的定位，不把上一个会话的挂在上面。
-  // 画的时候不能写状态，所以这里只读存储；状态由 adopt 在下一条提示时跟上
-  try {
-    const session = await $.session.id()
-
-    if (session !== seen.owner) {
-      return { ...seen, owner: session, focus: asFocus(await $.store.get(`focus:${session}`)) }
-    }
-  } catch {
-    // 拿不到会话标识就照现有的画
-  }
-
-  return seen
-}
-
-// 会话换了之后，把状态里的定位也换成新会话的
-async function adopt($: EngineInterface) {
-  const seen = await view($)
-
-  if (seen.owner !== (await read($, owner))) {
-    await update($, focus, () => seen.focus)
-    await update($, owner, () => seen.owner)
-  }
-
-  return seen
+  return { style: await read($, style), tint: await read($, tint), lang: await read($, lang), limits: await read($, limits) }
 }
 
 const words = async ($: EngineInterface) => TEXT[(await view($)).lang]
 
-// 没选过语言时：系统是中文、或以前写过的定位里有中文，就用中文；否则英文
-async function guess($: EngineInterface): Promise<Lang> {
+// 没选过语言时：系统是中文就用中文，否则英文
+function guess(): Lang {
   try {
-    if (/^zh/i.test(Intl.DateTimeFormat().resolvedOptions().locale)) {
-      return 'zh'
-    }
+    return /^zh/i.test(Intl.DateTimeFormat().resolvedOptions().locale) ? 'zh' : 'en'
   } catch {
-    // 没有就只看定位
+    return 'en'
   }
+}
 
-  try {
-    for (const key of (await $.store.keys()).filter(key => key.startsWith('focus:'))) {
-      const held = asFocus(await $.store.get(key))
-
-      if (/[\u4e00-\u9fff]/.test(`${held?.goal ?? ''}${held?.bottleneck ?? ''}`)) {
-        return 'zh'
-      }
-    }
-  } catch {
-    // 读不到就按英文
+// 0.16 之前按会话存过“定位”，现在不用了，清掉
+async function forget($: EngineInterface) {
+  for (const key of (await $.store.keys()).filter(key => key.startsWith('focus:'))) {
+    await $.store.delete(key)
   }
-
-  return 'en'
 }
 
 // 界面事件里出的错不该冒到引擎去
@@ -618,23 +398,6 @@ async function quietly(work: () => Promise<unknown>) {
     await work()
   } catch {
     // 下一次读数或下一次点击再来
-  }
-}
-
-// 定位按会话存，只留最近写过的 KEPT_SESSIONS 条
-async function prune($: EngineInterface) {
-  const keys = (await $.store.keys()).filter(key => key.startsWith('focus:'))
-
-  if (keys.length <= KEPT_SESSIONS) {
-    return
-  }
-
-  const aged = await Promise.all(
-    keys.map(async key => ({ key, at: Number((await $.store.get(key) as { at?: number } | null)?.at) || 0 })),
-  )
-
-  for (const one of aged.sort((a, b) => b.at - a.at).slice(KEPT_SESSIONS)) {
-    await $.store.delete(one.key)
   }
 }
 
@@ -650,26 +413,6 @@ async function nextTint($: EngineInterface) {
 }
 
 const known = (windows: RateLimit[]) => windows.filter(one => WINDOWS[one.kind] !== undefined)
-
-async function setFocus($: EngineInterface, next: Focus | null) {
-  const session = await $.session.id()
-  await update($, focus, () => next)
-  await update($, owner, () => session)
-
-  if (next === null) {
-    await $.store.delete(`focus:${session}`)
-  } else {
-    await $.store.set(`focus:${session}`, { ...next, at: await $.clock.now() })
-  }
-}
-
-function asFocus(value: unknown): Focus | null {
-  const one = value as Partial<Focus> | null
-  const goal = clean(one?.goal)
-  const bottleneck = clean(one?.bottleneck)
-
-  return goal && bottleneck ? { goal, bottleneck, scope: clean(one?.scope) } : null
-}
 
 function isLimit(value: unknown): value is RateLimit {
   const one = value as Partial<RateLimit> | null

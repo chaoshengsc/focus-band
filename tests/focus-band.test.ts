@@ -55,7 +55,7 @@ const measure = ($: any, rateLimits: any[]) =>
 const setFocus = ($: any, input: Record<string, unknown>) =>
   $.tool.call({ tool: 'mcp__focus-band__set_focus', ...input })
 
-const style = ($: any, args?: string) => $.command.run({ command: 'focus-style', args })
+const style = ($: any, args?: string) => $.command.run({ command: 'focus', args: `style ${args ?? ''}` })
 
 describe('focus-band', () => {
   for (const surface of ['terminal', 'desktop'] as const) {
@@ -179,7 +179,7 @@ describe('focus-band', () => {
   test('配色：只换进度条颜色；命令和螃蟹按钮都能换', async ($: any, on: any) => {
     const { kept } = world(on, {}, [{ kind: 'five_hour', percentUsed: 40 }])
     await start($)
-    const color = async (args?: string) => (await $.command.run({ command: 'focus-color', args })).text as string
+    const color = async (args?: string) => (await $.command.run({ command: 'focus', args: `color ${args ?? ''}` })).text as string
     const ui = await mount($, 'desktop')
     const fill = async () => String((await ui.find({ type: 'Svg' }))?.props?.source)
 
@@ -321,11 +321,11 @@ describe('focus-band', () => {
     expect(await ui.find({ type: 'Text', text: /^Goal $/ })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /终点|瓶颈/ })).toBeUndefined()
     await ui.unmount()
-    expect((await $.command.run({ command: 'focus-color', args: 'clay' })).text).toMatch(/4 Clay/)
-    expect((await $.command.run({ command: 'focus-color', args: '雾蓝' })).text).toMatch(/5 Blue/)
+    expect((await $.command.run({ command: 'focus', args: 'color clay' })).text).toMatch(/4 Clay/)
+    expect((await $.command.run({ command: 'focus', args: 'color 雾蓝' })).text).toMatch(/5 Blue/)
     expect(((await $.prompt.submit({ text: 'hi' })).context as string[])[0]).toMatch(/Current focus/)
 
-    const lang = async (args?: string) => (await $.command.run({ command: 'focus-lang', args })).text as string
+    const lang = async (args?: string) => (await $.command.run({ command: 'focus', args: `lang ${args ?? ''}` })).text as string
     expect(await lang('fr')).toMatch(/Usage/)
     expect(await lang()).toMatch(/中文/)
     expect(kept.lang).toBe('zh')
@@ -351,6 +351,9 @@ describe('focus-band', () => {
     // 全角分隔，第三段之后并入范围
     expect(await run('甲 ｜ 乙 ｜ 丙 | 丁')).toMatch(/终点：甲；瓶颈：乙；范围：丙 \| 丁/)
     expect((kept['focus:s1'] as any).bottleneck).toBe('乙')
+    // 以 style 开头但带分隔符的是定位，不是子命令
+    expect(await run('style 指南定稿 | 审稿意见')).toMatch(/终点：style 指南定稿/)
+    await run('甲 ｜ 乙 ｜ 丙 | 丁')
     expect(await run('只有终点')).toMatch(/终点和瓶颈都要填/)
     expect(await run()).toMatch(/终点：甲/)
     expect(await run('CLEAR')).toMatch(/已清除/)

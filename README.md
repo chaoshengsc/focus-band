@@ -6,9 +6,9 @@ A Claude Code mod that keeps one band above the prompt box in the desktop app: t
 
 ![Screenshot](docs/screenshot.png)
 
-Status: 0.14.0. `claude plugin validate` passes, `claude plugin test` passes 15 tests.
+Status: 0.15.0. `claude plugin validate` passes, `claude plugin test` passes 15 tests.
 
-The interface comes in English and Chinese. It picks Chinese when the system locale is Chinese (or an earlier focus was written in Chinese) and English otherwise; `/focus-lang` switches.
+The interface comes in English and Chinese. It picks Chinese when the system locale is Chinese (or an earlier focus was written in Chinese) and English otherwise; `/focus lang` switches.
 
 ## Install
 
@@ -25,9 +25,9 @@ Layout: `.claude-plugin/plugin.json` (manifest), `hooks/register.tsx` (all the l
 ## Usage
 
 - `/focus goal | bottleneck | scope`: set the focus; no argument shows it; `/focus clear` removes it
-- `/focus-style 1|2|3`: standard / one line / footer
-- `/focus-lang zh|en`: interface language; no argument switches
-- `/focus-color`: change the progress-bar color (on desktop, clicking the small crab on the right does the same)
+- `/focus style 1|2|3`: standard / one line / footer
+- `/focus lang zh|en`: interface language; no argument switches
+- `/focus color`: change the progress-bar color (on desktop, clicking the small crab on the right does the same)
 - The model updates the focus with the `set_focus` tool; each prompt carries one line with the current focus for the model (the user never sees it)
 
 ## Known limits (by design of the host, not a to-do list)

@@ -6,11 +6,13 @@
 
 ## 安装
 
-需要支持 mods 的 Claude Code（2.1.286 及以上）。把仓库克隆到技能目录，新开的会话会自动加载：
+需要支持 mods 的 Claude Code（2.1.286 及以上）。在终端里运行这一条，然后新开一个会话：
 
 ```bash
-git clone https://github.com/chaoshengsc/focus-band ~/.claude/skills/focus-band
+claude plugin marketplace add chaoshengsc/focus-band && claude plugin install focus-band@chaoshengsc
 ```
+
+更新用 `claude plugin marketplace update chaoshengsc`，卸载用 `claude plugin uninstall focus-band@chaoshengsc`。
 
 目录结构：`.claude-plugin/plugin.json`（清单）、`hooks/register.tsx`（全部逻辑）、`types/index.d.ts`（状态声明）、`tests/`（测试）。
 
@@ -38,7 +40,7 @@ claude plugin validate ~/.claude/skills/focus-band
 claude plugin test ~/.claude/skills/focus-band
 ```
 
-改完要重启会话才生效。卸载：删除本目录。
+改完要重启会话才生效。
 
 ## 许可证
 

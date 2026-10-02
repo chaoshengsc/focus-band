@@ -1,5 +1,7 @@
 # focus-band
 
+中文 | [English](README.en.md)
+
 桌面端输入框上方常驻一栏：当前的终点 / 瓶颈 / 授权范围，以及 5h、7d 额度。
 
 ![效果截图](docs/screenshot.png)

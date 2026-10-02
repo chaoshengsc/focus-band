@@ -455,7 +455,7 @@ function meters(
     const used = isStale ? 0 : Math.min(100, Math.max(0, one.percentUsed))
     const level = LEVELS.find(step => used < step.upTo) ?? LEVELS[0]
     const color = level.color
-    // 平时用所选配色，接近上限时警告色优先
+    // 只有进度条变色，数字保持正文色；平时用所选配色，接近上限时警告色优先
     const stroke = level.stroke ?? accent
     const when = hasTime && one.resetsAt ? resets(one.resetsAt, now) : ''
     const filled = Math.round(used / 10)
@@ -473,7 +473,7 @@ function meters(
             {filled < 10 && <Text color="inactive">{'░'.repeat(10 - filled)}</Text>}
           </Text>
         )}
-        <Text color={color} dimColor={isStale}>{figure}</Text>
+        <Text dimColor={isStale}>{figure}</Text>
         {when !== '' && <Text dimColor>{when}</Text>}
       </Box>
     )

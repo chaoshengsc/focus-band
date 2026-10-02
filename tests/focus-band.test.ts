@@ -81,7 +81,7 @@ describe('focus-band', () => {
       ])
       expect(await ui.find({ type: 'Text', text: /^5h$/ })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: /^24%$/ })).toBeDefined()
-      expect((await ui.find({ type: 'Text', text: /^81%$/ }))?.props?.color).toBe('warning')
+      expect((await ui.find({ type: 'Text', text: /^81%$/ }))?.props?.color).toBeUndefined()
       expect(await ui.find({ type: 'Text', text: /opus/ })).toBeUndefined()
       // 任何界面都不再画方块字符；圆环只在桌面端
       expect(await ui.find({ type: 'Text', text: /█|░/ })).toBeUndefined()
@@ -134,7 +134,7 @@ describe('focus-band', () => {
     expect(await ui.find({ type: 'Text', text: /范围丙/ })).toBeDefined()
     expect(await ui.find({ type: 'Svg' })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /█|░/ })).toBeUndefined()
-    expect((await ui.find({ type: 'Text', text: /^96%$/ }))?.props?.color).toBe('error')
+    expect((await ui.find({ type: 'Text', text: /^96%$/ }))?.props?.color).toBeUndefined()
     expect(await ui.find({ type: 'Text', text: /^100%\+$/ })).toBeDefined()
     expect(
       await ui.find({ type: 'Text', text: new RegExp(`^${pad(soon.getHours())}:${pad(soon.getMinutes())}$`) }),

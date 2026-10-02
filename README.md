@@ -39,3 +39,7 @@ claude plugin test ~/.claude/skills/focus-band
 ```
 
 改完要重启会话才生效。卸载：删除本目录。
+
+## 许可证
+
+MIT，见 [LICENSE](LICENSE)。小螃蟹图标是照 Claude Code 的形象画的，该形象归 Anthropic 所有，不在本许可证范围内。

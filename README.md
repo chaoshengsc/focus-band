@@ -1,40 +1,42 @@
 # focus-band
 
-中文 | [English](README.en.md)
+English | [中文](README.zh.md)
 
-桌面端输入框上方常驻一栏：当前的终点 / 瓶颈 / 授权范围，以及 5h、7d 额度。
+A Claude Code mod that keeps one band above the prompt box in the desktop app: the current goal / bottleneck / write scope, plus your 5h and 7d usage limits.
 
-![效果截图](docs/screenshot.png)
+![Screenshot](docs/screenshot.png)
 
-状态：0.13.0，2026-10-02 固化。`claude plugin validate` 通过，`claude plugin test` 13 通过。
+Status: 0.13.0, frozen on 2026-10-02. `claude plugin validate` passes, `claude plugin test` passes 13 tests.
 
-## 安装
+The labels in the band and the command replies are in Chinese (终点 = goal, 瓶颈 = bottleneck, 范围 = scope).
 
-需要支持 mods 的 Claude Code（2.1.286 及以上）。在终端里运行这一条，然后新开一个会话：
+## Install
+
+Requires a Claude Code build with mods support (2.1.286 or later). Run this in a terminal, then start a new session:
 
 ```bash
 claude plugin marketplace add chaoshengsc/focus-band && claude plugin install focus-band@chaoshengsc
 ```
 
-更新用 `claude plugin marketplace update chaoshengsc`，卸载用 `claude plugin uninstall focus-band@chaoshengsc`。
+Update with `claude plugin marketplace update chaoshengsc`; uninstall with `claude plugin uninstall focus-band@chaoshengsc`.
 
-目录结构：`.claude-plugin/plugin.json`（清单）、`hooks/register.tsx`（全部逻辑）、`types/index.d.ts`（状态声明）、`tests/`（测试）。
+Layout: `.claude-plugin/plugin.json` (manifest), `hooks/register.tsx` (all the logic), `types/index.d.ts` (state contract), `tests/` (tests).
 
-## 用法
+## Usage
 
-- `/focus 终点 | 瓶颈 | 范围`：改写定位；不带参数查看；`/focus clear` 清除
-- `/focus-style 1|2|3`：标准 / 一行 / 页脚
-- `/focus-color`：换进度条配色（桌面端点右侧小螃蟹也行）
-- 模型用 `set_focus` 工具更新定位；每条提示后会附一句当前定位给模型（用户看不到）
+- `/focus goal | bottleneck | scope`: set the focus; no argument shows it; `/focus clear` removes it
+- `/focus-style 1|2|3`: standard / one line / footer
+- `/focus-color`: change the progress-bar color (on desktop, clicking the small crab on the right does the same)
+- The model updates the focus with the `set_focus` tool; each prompt carries one line with the current focus for the model (the user never sees it)
 
-## 已知限制（机制所限，不是待办）
+## Known limits (by design of the host, not a to-do list)
 
-- 灰色底板是桌面端画的，mod 改不了它的颜色、圆角、高度，也画不出自己那一行
-- 额度来自“最近一次模型响应”，会话空闲或别的会话在消耗时会滞后于右侧面板
-- 一行约 19px 高，图标超过就会撑高底板；按钮焦点框上下会被裁
-- 版式 2、3 不显示范围（有意保留）
+- The grey backing is drawn by the desktop app. A mod cannot change its color, corner radius or height, and cannot draw outside its own row
+- Usage figures come from the last model response, so they lag behind the usage panel while this session is idle or another session is spending
+- A row is about 19px tall; a taller icon makes the band taller. The button's focus ring is clipped at the top and bottom
+- Styles 2 and 3 do not show the scope (intentional)
 
-## 改动后
+## After changing the code
 
 ```bash
 claude plugin validate ~/.claude/skills/focus-band
@@ -44,8 +46,8 @@ claude plugin validate ~/.claude/skills/focus-band
 claude plugin test ~/.claude/skills/focus-band
 ```
 
-改完要重启会话才生效。
+Restart the session for changes to take effect.
 
-## 许可证
+## License
 
-MIT，见 [LICENSE](LICENSE)。小螃蟹图标是照 Claude Code 的形象画的，该形象归 Anthropic 所有，不在本许可证范围内。
+MIT, see [LICENSE](LICENSE). The crab icon is drawn after the Claude Code mascot, which belongs to Anthropic and is not covered by this license.

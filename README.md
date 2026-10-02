@@ -2,6 +2,8 @@
 
 桌面端输入框上方常驻一栏：当前的终点 / 瓶颈 / 授权范围，以及 5h、7d 额度。
 
+![效果截图](docs/screenshot.png)
+
 状态：0.13.0，2026-10-02 固化。`claude plugin validate` 通过，`claude plugin test` 13 通过。
 
 ## 安装

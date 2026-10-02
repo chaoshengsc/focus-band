@@ -8,7 +8,7 @@ A Claude Code mod that keeps one band above the prompt box in the desktop app: t
 
 Status: 0.14.0. `claude plugin validate` passes, `claude plugin test` passes 15 tests.
 
-The interface comes in English and Chinese. It picks Chinese when the system locale is Chinese (or an earlier focus was written in Chinese) and English otherwise; `/focus-lang` switches. The screenshot shows the Chinese labels (终点 = goal, 瓶颈 = bottleneck, 范围 = scope).
+The interface comes in English and Chinese. It picks Chinese when the system locale is Chinese (or an earlier focus was written in Chinese) and English otherwise; `/focus-lang` switches.
 
 ## Install
 

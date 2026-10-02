@@ -4,7 +4,7 @@
 
 桌面端输入框上方常驻一栏：当前的终点 / 瓶颈 / 授权范围，以及 5h、7d 额度。
 
-![效果截图](docs/screenshot.png)
+![效果截图](docs/screenshot.zh.png)
 
 状态：0.14.0。`claude plugin validate` 通过，`claude plugin test` 15 通过。
 

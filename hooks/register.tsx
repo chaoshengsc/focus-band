@@ -317,7 +317,7 @@ export const register: Register = on => {
     // 外框：右侧常驻换色按钮
     const framed = (body: unknown) => (
       <Box key="band" flexDirection="row" gap={1} alignItems="center">
-        <Box flexDirection="column" flexGrow={1} flexShrink={1}>
+        <Box flexDirection="column" flexGrow={1} flexShrink={1} minWidth={0}>
           {body}
         </Box>
         <Box flexShrink={0}>
@@ -350,9 +350,10 @@ export const register: Register = on => {
       )
 
       return framed(
-        <Box flexDirection="column">
+        // 每一层都要允许收缩到 0，长文字才会被截成省略号，而不是把整行撑出底板、把螃蟹挤走
+        <Box flexDirection="column" minWidth={0}>
           {current !== null && (
-            <Box flexDirection="row" gap={1}>
+            <Box flexDirection="row" gap={1} minWidth={0}>
               {item(t.goal, current.goal)}
               {dot}
               {item(t.bottleneck, current.bottleneck)}
@@ -371,7 +372,7 @@ export const register: Register = on => {
 
     // 2 一行 / 3 页脚：一句安静的话，终点弱化在前，瓶颈在后；版式 2 把额度靠右放
     return framed(
-      <Box flexDirection="row" gap={2} alignItems="center">
+      <Box flexDirection="row" gap={2} alignItems="center" minWidth={0}>
         {current !== null && (
           <Text wrap="truncate-end">
             {columns >= 60 && <Text dimColor>{current.goal} › </Text>}

@@ -1,6 +1,6 @@
 {
   "name": "focus-band",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "description": "输入框上方常驻显示：当前的终点/瓶颈/授权范围，以及额度用量。",
   "author": {
     "name": "sc"

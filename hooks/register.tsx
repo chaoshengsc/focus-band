@@ -3,11 +3,12 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { Focus, RateLimit } from '../types'
 
-// 平时不上色，只有接近上限时才用主题里的警告色和错误色；80 / 95 与桌面端自己的额度指示一致。
+// 平时不上色，只有接近上限时才用主题里的警告色和错误色。
+// 桌面端的用量面板在 94% 时已经是红色（实测），所以 90 起用错误色；页脚圆环的 80 / 95 是另一套
 // stroke 是桌面端小圆环的颜色：矢量图读不到主题，所以用深浅主题下都看得清的中间调
 const LEVELS = [
   { upTo: 80, color: undefined, stroke: undefined },
-  { upTo: 95, color: 'warning', stroke: '#d9822b' },
+  { upTo: 90, color: 'warning', stroke: '#d9822b' },
   { upTo: Infinity, color: 'error', stroke: '#d64545' },
 ]
 const TRACK = 'rgba(128,128,128,0.25)'

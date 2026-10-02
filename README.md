@@ -6,7 +6,7 @@ A Claude Code mod that keeps one band above the prompt box in the desktop app: t
 
 ![Screenshot](docs/screenshot.png)
 
-Status: 0.15.1. `claude plugin validate` passes, `claude plugin test` passes 15 tests.
+Status: 0.15.2. `claude plugin validate` passes, `claude plugin test` passes 15 tests.
 
 The interface comes in English and Chinese. It picks Chinese when the system locale is Chinese (or an earlier focus was written in Chinese) and English otherwise; `/focus lang` switches.
 

@@ -6,7 +6,7 @@
 
 ![效果截图](docs/screenshot.zh.png)
 
-状态：0.15.1。`claude plugin validate` 通过，`claude plugin test` 15 通过。
+状态：0.15.2。`claude plugin validate` 通过，`claude plugin test` 15 通过。
 
 界面有中文和英文两套：系统是中文（或以前写过中文定位）时用中文，否则用英文；`/focus lang` 可切换。
 

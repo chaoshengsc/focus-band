@@ -4,7 +4,13 @@
 
 一个 Claude Code mod：在桌面端输入框上方常驻显示额度用量——5h 和 7d 两个窗口，各带一条细进度条、百分比和重置时间。
 
-![效果截图](docs/screenshot.zh.png)
+样式 1，输入框上方（默认）：
+
+![样式 1：输入框上方](docs/style1.png)
+
+样式 2，页脚模型名旁边：
+
+![样式 2：页脚](docs/style2.png)
 
 状态：0.16.1。`claude plugin validate` 通过，`claude plugin test` 7 通过。
 

@@ -4,7 +4,13 @@ English | [中文](README.zh.md)
 
 A Claude Code mod that keeps your usage limits in view above the prompt box in the desktop app: the 5h and 7d windows, each with a thin progress bar, the percentage and the reset time.
 
-![Screenshot](docs/screenshot.png)
+Style 1, above the prompt box (default):
+
+![Style 1: above the prompt box](docs/style1.png)
+
+Style 2, in the footer next to the model name:
+
+![Style 2: in the footer](docs/style2.png)
 
 Status: 0.16.1. `claude plugin validate` passes, `claude plugin test` passes 7 tests.
 

@@ -312,7 +312,7 @@ function meters(
 // Claude Code 的小螃蟹：照桌面端新会话里输入框上那只画的 12×8 像素格，左右各留一格透明边。
 // 显示成 28×16，每格正好 2 像素，普通屏和高分屏都不发虚
 const CRAB =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 8" shape-rendering="crispEdges"><g fill="#c36e51"><rect x="3" y="0" width="8" height="6"/><rect x="1" y="2" width="12" height="2"/><rect x="3" y="6" width="1" height="2"/><rect x="5" y="6" width="1" height="2"/><rect x="8" y="6" width="1" height="2"/><rect x="10" y="6" width="1" height="2"/></g><rect x="4" y="1" width="1" height="1"/><rect x="9" y="1" width="1" height="1"/></svg>'
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 8" shape-rendering="crispEdges"><g fill="#d77757"><rect x="3" y="0" width="8" height="6"/><rect x="1" y="2" width="12" height="2"/><rect x="3" y="6" width="1" height="2"/><rect x="5" y="6" width="1" height="2"/><rect x="8" y="6" width="1" height="2"/><rect x="10" y="6" width="1" height="2"/></g><rect x="4" y="1" width="1" height="1"/><rect x="9" y="1" width="1" height="1"/></svg>'
 
 // 4 像素高的圆角细线，代替比例字体下难看的方块字符
 function bar(used: number, fill: string): string {

@@ -10,7 +10,7 @@ Status: 0.16.0. `claude plugin validate` passes, `claude plugin test` passes 6 t
 
 The bar turns orange from 80% and red from 90%; the numbers stay in the text color. Once a window's reset time has passed, its figure shows `—` until a fresh reading arrives.
 
-Earlier versions also showed a goal / bottleneck / scope line above the bars (the screenshot still shows it). It was removed in 0.16.0: it depended on the model keeping it current and went stale too often.
+Earlier versions also showed a goal / bottleneck / scope line above the bars. It was removed in 0.16.0: it depended on the model keeping it current and went stale too often.
 
 ## Install
 

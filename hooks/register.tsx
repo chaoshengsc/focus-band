@@ -160,9 +160,10 @@ export const register: Register = on => {
     const { Box, Text } = table
 
     return (
-      <Box flexDirection="row" gap={2} alignItems="center">
-        {e.props.modes.length > 0 && <Text dimColor>{e.props.modes.join(' & ')}</Text>}
-        {meters(table, e.surface, windows, 'ring', TINTS[seen.tint] ?? TINTS[0], await $.clock.now(), false, TEXT[seen.lang])}
+      <Box flexDirection="row" gap={0} alignItems="center">
+        {e.props.modes.length > 0 && <Text dimColor>{e.props.modes.join(' & ') + FOOTER_GAP}</Text>}
+        {/* 页脚只放文字（矢量图在这里不显示）。各项之间的留白照这一行原生各项之间的间距 */}
+        {meters(table, e.surface, windows, 'none', TINTS[seen.tint] ?? TINTS[0], await $.clock.now(), false, TEXT[seen.lang], <Text>{FOOTER_GAP}</Text>, <Text>{'\u00a0'}</Text>)}
       </Box>
     )
   })
@@ -180,8 +181,9 @@ export const register: Register = on => {
     const columns = e.props.bodyColumns
     const t = TEXT[seen.lang]
     const tintName = t.tints[seen.tint] ?? t.tints[0]
-
-    return (
+    // 这一栏里别的插件画的内容留着：叠在额度栏上面；下面没有东西时照旧只画自己
+    const below = await next(e).catch(() => undefined)
+    const band = (
       <Box key="band" flexDirection="row" gap={1} alignItems="center">
         <Box flexDirection="row" gap={1} alignItems="center" flexGrow={1} flexShrink={1} minWidth={0}>
           {meters(
@@ -213,6 +215,15 @@ export const register: Register = on => {
           )}
         </Box>
       </Box>
+    )
+
+    return below ? (
+      <Box flexDirection="column">
+        {below}
+        {band}
+      </Box>
+    ) : (
+      band
     )
   })
 }
@@ -264,6 +275,11 @@ async function runLang($: EngineInterface, asked: string) {
 }
 
 // 每个窗口：标签、指示（细条或小圆环，终端上细条退回字符）、百分比，需要时再加重置时间
+// 页脚原生各项（模型名、强度、圆环）之间实测留白 15–18pt。桌面端页脚不理会 gap，空白字符也被压成一个空格
+// （真机试过 gap 0/2/4 与全角空白，间距都不变），所以用不算空白的盲文空格撑开。
+// 真机量过：两个盲文空格比原生间距宽约三成，一个略窄于原生间距
+const FOOTER_GAP = '\u2800'
+
 function meters(
   table: any,
   surface: string,
@@ -274,6 +290,7 @@ function meters(
   hasTime: boolean,
   t: (typeof TEXT)[Lang],
   separator?: unknown,
+  joiner?: unknown,
 ) {
   const { Box, Text } = table
   const Svg = surface === 'terminal' ? undefined : table.Svg
@@ -291,9 +308,10 @@ function meters(
     const figure = isStale ? '—' : one.percentUsed > 100 ? '100%+' : `${used}%`
 
     return (
-      <Box key={one.kind} flexDirection="row" gap={1} flexShrink={0} alignItems="center">
+      <Box key={one.kind} flexDirection="row" gap={joiner ? 0 : 1} flexShrink={0} alignItems="center">
         {i > 0 && separator}
         <Text dimColor>{WINDOWS[one.kind]}</Text>
+        {joiner}
         {shape === 'ring' && Svg && <Svg source={ring(used, stroke)} alt={t.used(figure)} width={14} height={14} />}
         {shape === 'bar' && Svg && <Svg source={bar(used, stroke)} alt={t.used(figure)} width={BAR} height={6} />}
         {shape === 'bar' && !Svg && (
@@ -302,7 +320,8 @@ function meters(
             {filled < 10 && <Text color="inactive">{'░'.repeat(10 - filled)}</Text>}
           </Text>
         )}
-        <Text dimColor={isStale}>{figure}</Text>
+        {/* 页脚这一格本来就是弱化的模式标签，数字用正文色会显得比旁边的模型名还重 */}
+        <Text dimColor={isStale || joiner !== undefined}>{figure}</Text>
         {when !== '' && <Text dimColor>{when}</Text>}
       </Box>
     )

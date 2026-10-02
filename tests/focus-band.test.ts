@@ -105,9 +105,12 @@ describe('focus-band', () => {
 
     const footer = await mount($, 'desktop', {}, 'SessionMode')
     expect(await footer.find({ type: 'Text', text: /^40%$/ })).toBeDefined()
-    expect(await footer.find({ type: 'Svg' })).toBeDefined()
+    // 页脚只有文字：没有圆圈、线段、分隔点
+    expect(await footer.find({ type: 'Text', text: /[○◔◑◕●━]/ })).toBeUndefined()
+    expect(await footer.find({ type: 'Text', text: /·/ })).toBeUndefined()
+    expect(await footer.find({ type: 'Svg' })).toBeUndefined()
     // 引擎原有的模式标签保留
-    expect(await footer.find({ type: 'Text', text: /^focus$/ })).toBeDefined()
+    expect(await footer.find({ type: 'Text', text: /^focus/ })).toBeDefined()
     await footer.unmount()
 
     expect(await band($, 'style 3')).toMatch(/用法/)
@@ -213,5 +216,21 @@ describe('focus-band', () => {
     expect(await band($, 'lang')).toMatch(/中文/)
     expect(kept.lang).toBe('zh')
     expect(await band($, 'style 2')).toMatch(/2 页脚/)
+  })
+  test('同一栏里别的插件画的内容留着，叠在额度栏上面', async ($: any, on: any) => {
+    world(on, {}, [{ kind: 'five_hour', percentUsed: 40 }])
+    on('ui.render', { component: 'AbovePrompt' }, ($: any, e: any) => {
+      const { Text } = $.ui.resolve(e)
+
+      return (globalThis as any).h(Text, {}, '别的插件')
+    })
+    await start($)
+    const ui = await mount($, 'desktop')
+    const seen = (await ui.findAll({ type: 'Text' })).map((one: any) => String(one.props.children ?? one.text ?? ''))
+    expect(seen.indexOf('别的插件')).toBe(0)
+    expect(seen.includes('│')).toBe(false)
+    expect((await ui.findAll({ type: 'Box' })).filter((one: any) => one.props?.borderStyle !== undefined).length).toBe(0)
+    expect(await ui.find({ type: 'Text', text: /^40%$/ })).toBeDefined()
+    await ui.unmount()
   })
 })

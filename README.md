@@ -6,7 +6,7 @@ A Claude Code mod that keeps your usage limits in view above the prompt box in t
 
 ![Screenshot](docs/screenshot.png)
 
-Status: 0.16.0. `claude plugin validate` passes, `claude plugin test` passes 6 tests.
+Status: 0.16.1. `claude plugin validate` passes, `claude plugin test` passes 7 tests.
 
 The bar turns orange from 80% and red from 90%; the numbers stay in the text color. Once a window's reset time has passed, its figure shows `—` until a fresh reading arrives.
 
@@ -29,7 +29,7 @@ Layout: `.claude-plugin/plugin.json` (manifest), `hooks/register.tsx` (all the l
 One command, three subcommands; without a value each picks the next option:
 
 - `/band color [1-7 | name]`: progress-bar color (on desktop, clicking the small crab on the right does the same)
-- `/band style [1 | 2]`: where it sits, 1 above the prompt box, 2 in the footer next to the model name
+- `/band style [1 | 2]`: where it sits, 1 above the prompt box (bars, reset times), 2 in the footer next to the model name (text only, e.g. `5h 47%  7d 69%`)
 - `/band lang [zh | en]`: language of the command replies; defaults to Chinese when the system locale is Chinese, English otherwise
 
 ## Known limits (by design of the host, not a to-do list)

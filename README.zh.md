@@ -6,7 +6,7 @@
 
 ![效果截图](docs/screenshot.zh.png)
 
-状态：0.16.0。`claude plugin validate` 通过，`claude plugin test` 6 通过。
+状态：0.16.1。`claude plugin validate` 通过，`claude plugin test` 7 通过。
 
 进度条 80% 起变橙、90% 起变红，数字始终是正文色。窗口过了重置时刻后显示 `—`，直到拿到新的读数。
 
@@ -29,7 +29,7 @@ claude plugin marketplace add chaoshengsc/focus-band && claude plugin install fo
 只有一条命令，三个子命令；不带值则换下一个：
 
 - `/band color [1-7 | 配色名]`：进度条配色（桌面端点右侧小螃蟹也行）
-- `/band style [1 | 2]`：位置，1 输入框上方，2 页脚模型名旁边
+- `/band style [1 | 2]`：位置，1 输入框上方（进度条、重置时间），2 页脚模型名旁边（只有文字，如 `5h 47%  7d 69%`）
 - `/band lang [zh | en]`：命令回复的语言；系统是中文时默认中文，否则英文
 
 ## 已知限制（机制所限，不是待办）
